@@ -1,0 +1,45 @@
+ DIBEV1 by Race (_IMPRACE):
++--------+---------+--------------+--------------+
+|_IMPRACE|    Total|Diabetes_Count|Prevalence (%)|
++--------+---------+--------------+--------------+
+|     1.0|261475361|      29450159|         11.26|
+|     2.0|  4263219|        683486|         16.03|
+|     3.0|   380268|         22140|          5.82|
+|     4.0|    97158|         22928|          23.6|
+|     5.0|  5320518|        474787|          8.92|
+|     6.0|   309723|         28446|          9.18|
++--------+---------+--------------+--------------+
+
+ DIBEV1 by Gender (SEX):
++---+---------+--------------+--------------+
+|SEX|    Total|Diabetes_Count|Prevalence (%)|
++---+---------+--------------+--------------+
+|1.0|108477351|      14266074|         13.15|
+|2.0|163368896|      16415872|         10.05|
++---+---------+--------------+--------------+
+
+ DIBEV1 by Age Group (_AGEG5YR):
+ +--------+--------+--------------+--------------+
+|_AGEG5YR|   Total|Diabetes_Count|Prevalence (%)|
++--------+--------+--------------+--------------+
+|     1.0|12965168|        126534|          0.98|
+|     2.0|10061594|        147302|          1.46|
+|     3.0|12086977|        324417|          2.68|
+|     4.0|12314645|        431783|          3.51|
+|     5.0|10875373|        471310|          4.33|
+|     6.0|15460714|       1207538|          7.81|
+|     7.0|22690546|       2096156|          9.24|
+|     8.0|32106924|       3853245|          12.0|
+|     9.0|39079332|       5255536|         13.45|
+|    10.0|38454540|       5912198|         15.37|
+|    11.0|26970563|       5007216|         18.57|
+|    12.0|13317955|       2381834|         17.88|
+|    13.0|25461916|       3466877|         13.62|
++--------+--------+--------------+--------------+
+
+Next:
+record the found prevalence you calculated for each category
+research what the actual prevalence is
+write a short paragraph comparing your found prevalence within the joined dataset to the actual prevalence, by gender, race/ethnic background, and age
+assess how you might improve the prevalence you calculated.
+Note: Does each row in the BRFSS dataset correspond to a single person in the U.S.? Check-out the BRFSS documentation.

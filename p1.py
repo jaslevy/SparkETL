@@ -1,6 +1,7 @@
 import sys
 from pyspark.sql import SparkSession
 import argparse
+from pyspark.sql.functions import when, col, count,  round
 #feel free to def new functions if you need
 
 def create_dataframe(filepath, format, spark):
@@ -13,9 +14,12 @@ def create_dataframe(filepath, format, spark):
 
     :return: the spark df uploaded
     """
-
-    #add your code here
-    spark_df = None #temporary placeholder
+    if format == "json":
+        spark_df = spark.read.json(filepath)
+    elif format == "csv":
+        spark_df = spark.read.csv(filepath, header=True, inferSchema=True)
+    else:
+        raise ValueError("Only import json or csv files")
 
     return spark_df
 
@@ -27,24 +31,88 @@ def transform_nhis_data(nhis_df):
     :param nhis_df: spark df
     :return: spark df, transformed df
     """
+    nhis_df = nhis_df.withColumn(
+        "_AGEG5YR",
+        when(col("AGE_P").between(18, 24), 1.0)
+        .when(col("AGE_P").between(25, 29), 2.0)
+        .when(col("AGE_P").between(30, 34), 3.0)
+        .when(col("AGE_P").between(35, 39), 4.0)
+        .when(col("AGE_P").between(40, 44), 5.0)
+        .when(col("AGE_P").between(45, 49), 6.0)
+        .when(col("AGE_P").between(50, 54), 7.0)
+        .when(col("AGE_P").between(55, 59), 8.0)
+        .when(col("AGE_P").between(60, 64), 9.0)
+        .when(col("AGE_P").between(65, 69), 10.0)
+        .when(col("AGE_P").between(70, 74), 11.0)
+        .when(col("AGE_P").between(75, 79), 12.0)
+        .when(col("AGE_P").between(80, 99), 13.0) 
+        .otherwise(14.0)
+    )
 
-    #add your code here
-    transformed_df = None #temporary placeholder
-    
-    return transformed_df
+    nhis_df = nhis_df.withColumn(
+        "_IMPRACE",
+        when((col("MRACBPI2") == 1) & (col("HISPAN_I") == 12), 1.0)  # White, Non-Hispanic
+        .when((col("MRACBPI2") == 2) & (col("HISPAN_I") == 12), 2.0)  # Black, Non-Hispanic
+        .when((col("MRACBPI2").isin(6, 7, 12)) & (col("HISPAN_I") == 12), 3.0)  # Asian, Non-Hispanic
+        .when((col("MRACBPI2") == 3) & (col("HISPAN_I") == 12), 4.0)  # AI/AN, Non-Hispanic
+        .when(col("HISPAN_I") != 12, 5.0)  # Hispanic Any Race
+        .when((col("MRACBPI2").isin(16, 17)) & (col("HISPAN_I") == 12), 6.0)  # Other, Non-Hispanic
+        .otherwise(6.0)
+    )
+
+    return nhis_df
 
 
-def calculate_statistics(joined_df):
-    """
-    Calculate prevalence statistics
+# def calculate_statistics(joined_df):
+#     """
+#     Calculate prevalence statistics
 
-    :param joined_df: the joined df
+#     :param joined_df: the joined df
 
-    :return: None
-    """
+#     :return: None
+#     """
 
-    #add your code here
-    pass
+#     #add your code here
+#     pass
+
+
+def report_summary_stats(joined_df):
+    print("\n DIBEV1 by Race (_IMPRACE):")
+    race_prevalence = (
+        joined_df.groupBy("_IMPRACE")
+        .agg(
+            count("*").alias("Total"),
+            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        )
+        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+        .orderBy("_IMPRACE")
+    )
+    race_prevalence.show()
+
+    print("\n DIBEV1 by Gender (SEX):")
+    gender_prevalence = (
+        joined_df.groupBy("SEX")
+        .agg(
+            count("*").alias("Total"),
+            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        )
+        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+        .orderBy("SEX")
+    )
+    gender_prevalence.show()
+
+    print("\n DIBEV1 by Age Group (_AGEG5YR):")
+    age_prevalence = (
+        joined_df.groupBy("_AGEG5YR")
+        .agg(
+            count("*").alias("Total"),
+            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        )
+        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+        .orderBy("_AGEG5YR")
+    )
+    age_prevalence.show()
+
 
 def join_data(brfss_df, nhis_df):
     """
@@ -55,10 +123,14 @@ def join_data(brfss_df, nhis_df):
     :return: the joined df
 
     """
-    #add your code here
-    joined_df = None ##temporary placeholder
-
+    joined_df = brfss_df.join(
+        nhis_df, 
+        on=["_AGEG5YR", "SEX", "_IMPRACE"],  
+        how="inner"  
+    )
+    joined_df = joined_df.dropna()
     return joined_df
+
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -86,8 +158,9 @@ if __name__ == '__main__':
         nhis_df = transform_nhis_data(nhis_df)
         # Join brfss and nhis df
         joined_df = join_data(brfss_df, nhis_df)
-        # Calculate statistics
-        calculate_statistics(joined_df)
+        # # Calculate statistics
+        # calculate_statistics(joined_df)
+        report_summary_stats(joined_df)
 
         # Save
         if args.output:
