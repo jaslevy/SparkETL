@@ -51,12 +51,12 @@ def transform_nhis_data(nhis_df):
 
     nhis_df = nhis_df.withColumn(
         "_IMPRACE",
-        when((col("MRACBPI2") == 1) & (col("HISPAN_I") == 12), 1.0)  # White, Non-Hispanic
-        .when((col("MRACBPI2") == 2) & (col("HISPAN_I") == 12), 2.0)  # Black, Non-Hispanic
-        .when((col("MRACBPI2").isin(6, 7, 12)) & (col("HISPAN_I") == 12), 3.0)  # Asian, Non-Hispanic
-        .when((col("MRACBPI2") == 3) & (col("HISPAN_I") == 12), 4.0)  # AI/AN, Non-Hispanic
-        .when(col("HISPAN_I") != 12, 5.0)  # Hispanic Any Race
-        .when((col("MRACBPI2").isin(16, 17)) & (col("HISPAN_I") == 12), 6.0)  # Other, Non-Hispanic
+        when((col("MRACBPI2") == 1) & (col("HISPAN_I") == 12), 1.0)  
+        .when((col("MRACBPI2") == 2) & (col("HISPAN_I") == 12), 2.0)  
+        .when((col("MRACBPI2").isin(6, 7, 12)) & (col("HISPAN_I") == 12), 3.0)  
+        .when((col("MRACBPI2") == 3) & (col("HISPAN_I") == 12), 4.0) 
+        .when(col("HISPAN_I") != 12, 5.0) 
+        .when((col("MRACBPI2").isin(16, 17)) & (col("HISPAN_I") == 12), 6.0)  
         .otherwise(6.0)
     )
 
