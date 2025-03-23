@@ -25,7 +25,6 @@ expected_df = spark.createDataFrame(manual_data, schema=manual_schema)
 
 expected_df = expected_df.dropna()
 
-
 expected_df.coalesce(1).write.csv("./data/joined_test.csv", mode="overwrite", header=True)
 
 spark.stop()

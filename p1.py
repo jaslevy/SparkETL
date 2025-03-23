@@ -164,7 +164,8 @@ if __name__ == '__main__':
 
         # Save
         if args.output:
-            joined_df.write.csv(args.output, mode='overwrite', header=True)
+            selected_columns = ["_AGEG5YR", "SEX", "_LLCPWT", "DIBEV1", "_IMPRACE"]
+            joined_df.select(*selected_columns).write.csv(args.output, mode="overwrite", header=True)
 
 
         # Stop spark session 
