@@ -62,67 +62,71 @@ def transform_nhis_data(nhis_df):
 
     return nhis_df
 
+def report_summary_stats(joined_df, output_path="report.txt"):
+    with open(output_path, "w") as f:
+        race_labels = {
+            1.0: "White, Non-Hispanic",
+            2.0: "Black, Non-Hispanic",
+            3.0: "Asian, Non-Hispanic",
+            4.0: "American Indian/Alaskan Native, Non-Hispanic",
+            5.0: "Hispanic",
+            6.0: "Other race, Non-Hispanic"
+        }
 
-# def calculate_statistics(joined_df):
-#     """
-#     Calculate prevalence statistics
+        age_ranges = {
+            1.0: "18–24", 2.0: "25–29", 3.0: "30–34", 4.0: "35–39", 5.0: "40–44",
+            6.0: "45–49", 7.0: "50–54", 8.0: "55–59", 9.0: "60–64", 10.0: "65–69",
+            11.0: "70–74", 12.0: "75–79", 13.0: "80-99", 14.0: "Unknown"
+        }
 
-#     :param joined_df: the joined df
-
-#     :return: None
-#     """
-
-#     #add your code here
-#     pass
-
-
-def report_summary_stats(joined_df):
-    print("\n DIBEV1 by Race (_IMPRACE):")
-    race_prevalence = (
-        joined_df.groupBy("_IMPRACE")
-        .agg(
-            count("*").alias("Total"),
-            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        f.write("DIBEV1 Prevalence by Race (_IMPRACE):\n")
+        race_stats = (
+            joined_df.groupBy("_IMPRACE")
+            .agg(
+                count("*").alias("Total"),
+                count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+            )
+            .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+            .orderBy("_IMPRACE")
+            .collect()
         )
-        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
-        .orderBy("_IMPRACE")
-    )
-    race_prevalence.show()
+        for row in race_stats:
+            label = race_labels.get(row["_IMPRACE"], f"Unknown ({row['_IMPRACE']})")
+            f.write(f"   - {label}: {row['Prevalence (%)']}% ({row['Diabetes_Count']} out of {row['Total']})\n")
 
-    print("\n DIBEV1 by Gender (SEX):")
-    gender_prevalence = (
-        joined_df.groupBy("SEX")
-        .agg(
-            count("*").alias("Total"),
-            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        f.write("\n DIBEV1 Prevalence by Gender (SEX):\n")
+        gender_stats = (
+            joined_df.groupBy("SEX")
+            .agg(
+                count("*").alias("Total"),
+                count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+            )
+            .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+            .orderBy("SEX")
+            .collect()
         )
-        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
-        .orderBy("SEX")
-    )
-    gender_prevalence.show()
+        for row in gender_stats:
+            label = "Male" if row["SEX"] == 1.0 else "Female"
+            f.write(f"   - {label}: {row['Prevalence (%)']}% ({row['Diabetes_Count']} out of {row['Total']})\n")
 
-    print("\n DIBEV1 by Age Group (_AGEG5YR):")
-    age_prevalence = (
-        joined_df.groupBy("_AGEG5YR")
-        .agg(
-            count("*").alias("Total"),
-            count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+        f.write("\n DIBEV1 Prevalence by Age Group (_AGEG5YR):\n")
+        age_stats = (
+            joined_df.groupBy("_AGEG5YR")
+            .agg(
+                count("*").alias("Total"),
+                count(when(col("DIBEV1") == 1, True)).alias("Diabetes_Count")
+            )
+            .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
+            .orderBy("_AGEG5YR")
+            .collect()
         )
-        .withColumn("Prevalence (%)", round((col("Diabetes_Count") / col("Total")) * 100, 2))
-        .orderBy("_AGEG5YR")
-    )
-    age_prevalence.show()
+        for row in age_stats:
+            label = age_ranges.get(row["_AGEG5YR"], f"Code {row['_AGEG5YR']}")
+            f.write(f"   - Age {label}: {row['Prevalence (%)']}% ({row['Diabetes_Count']} out of {row['Total']})\n")
+
 
 
 def join_data(brfss_df, nhis_df):
-    """
-    Join dataframes
-
-    :param brfss_df: spark df
-    :param nhis_df: spark df after transformation
-    :return: the joined df
-
-    """
     joined_df = brfss_df.join(
         nhis_df, 
         on=["_AGEG5YR", "SEX", "_IMPRACE"],  
@@ -138,7 +142,6 @@ if __name__ == '__main__':
     arg_parser.add_argument('brfss', type=str, default=None, help="nhis filename")
     arg_parser.add_argument('-o', '--output', type=str, default=None, help="output path(optional)")
 
-    #parse args
     args = arg_parser.parse_args()
     if not args.nhis or not args.brfss:
         arg_parser.usage = arg_parser.format_help()
@@ -147,26 +150,18 @@ if __name__ == '__main__':
         brfss_filename = args.nhis
         nhis_filename = args.brfss
 
-        # Start spark session
         spark = SparkSession.builder.getOrCreate()
 
-        # load dataframes
         brfss_df = create_dataframe(brfss_filename, 'json', spark)
         nhis_df = create_dataframe(nhis_filename, 'csv', spark)
 
-        # Perform mapping on nhis dataframe
         nhis_df = transform_nhis_data(nhis_df)
-        # Join brfss and nhis df
         joined_df = join_data(brfss_df, nhis_df)
-        # # Calculate statistics
-        # calculate_statistics(joined_df)
-        report_summary_stats(joined_df)
 
-        # Save
+        report_summary_stats(joined_df, output_path="summary_stats.txt")
+
         if args.output:
             selected_columns = ["_AGEG5YR", "SEX", "_LLCPWT", "DIBEV1", "_IMPRACE"]
             joined_df.select(*selected_columns).write.csv(args.output, mode="overwrite", header=True)
 
-
-        # Stop spark session 
         spark.stop()
